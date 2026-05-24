@@ -1,0 +1,156 @@
+const Database = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
+
+class DatabaseManager {
+  constructor(filePath) {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    this.db = new Database(filePath);
+    this.db.pragma('journal_mode = WAL');
+    this.setupSchema();
+  }
+
+  setupSchema() {
+    const schema = `
+      CREATE TABLE IF NOT EXISTS users (
+        guildId TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        balance INTEGER NOT NULL DEFAULT 0,
+        xp INTEGER NOT NULL DEFAULT 0,
+        level INTEGER NOT NULL DEFAULT 1,
+        tickets INTEGER NOT NULL DEFAULT 0,
+        lastDaily INTEGER DEFAULT 0,
+        lastLootpack INTEGER DEFAULT 0,
+        lastSpin INTEGER DEFAULT 0,
+        lastTicket INTEGER DEFAULT 0,
+        PRIMARY KEY (guildId, userId)
+      );
+
+      CREATE TABLE IF NOT EXISTS inventory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guildId TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        item TEXT NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS raffles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guildId TEXT NOT NULL,
+        prize TEXT NOT NULL,
+        entryCost INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open',
+        createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS raffle_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        raffleId INTEGER NOT NULL,
+        userId TEXT NOT NULL,
+        tickets INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(raffleId, userId),
+        FOREIGN KEY (raffleId) REFERENCES raffles(id) ON DELETE CASCADE
+      );
+    `;
+
+    this.db.exec(schema);
+  }
+
+  ensureUser(guildId, userId) {
+    const stmt = this.db.prepare(
+      'INSERT OR IGNORE INTO users (guildId, userId, balance, xp, level, tickets) VALUES (?, ?, 0, 0, 1, 0)'
+    );
+    stmt.run(guildId, userId);
+  }
+
+  getUser(guildId, userId) {
+    this.ensureUser(guildId, userId);
+    return this.db.prepare('SELECT * FROM users WHERE guildId = ? AND userId = ?').get(guildId, userId);
+  }
+
+  updateUser(guildId, userId, data) {
+    const fields = Object.keys(data);
+    if (!fields.length) return;
+
+    const setClause = fields.map((field) => `${field} = @${field}`).join(', ');
+    const stmt = this.db.prepare(`UPDATE users SET ${setClause} WHERE guildId = @guildId AND userId = @userId`);
+    stmt.run({ guildId, userId, ...data });
+  }
+
+  modifyBalance(guildId, userId, amount) {
+    this.ensureUser(guildId, userId);
+    const stmt = this.db.prepare('UPDATE users SET balance = balance + ? WHERE guildId = ? AND userId = ?');
+    stmt.run(amount, guildId, userId);
+    return this.getUser(guildId, userId);
+  }
+
+  addXp(guildId, userId, amount) {
+    this.ensureUser(guildId, userId);
+    const stmt = this.db.prepare('UPDATE users SET xp = xp + ? WHERE guildId = ? AND userId = ?');
+    stmt.run(amount, guildId, userId);
+    const user = this.getUser(guildId, userId);
+    const nextLevelXp = user.level * 200;
+    if (user.xp >= nextLevelXp) {
+      const levelUp = this.db.prepare('UPDATE users SET level = level + 1, xp = xp - ? WHERE guildId = ? AND userId = ?');
+      levelUp.run(nextLevelXp, guildId, userId);
+      return this.getUser(guildId, userId);
+    }
+    return user;
+  }
+
+  addItem(guildId, userId, item, quantity = 1) {
+    this.ensureUser(guildId, userId);
+    const existing = this.db.prepare('SELECT * FROM inventory WHERE guildId = ? AND userId = ? AND item = ?').get(guildId, userId, item);
+    if (existing) {
+      this.db.prepare('UPDATE inventory SET quantity = quantity + ? WHERE id = ?').run(quantity, existing.id);
+    } else {
+      this.db.prepare('INSERT INTO inventory (guildId, userId, item, quantity) VALUES (?, ?, ?, ?)').run(guildId, userId, item, quantity);
+    }
+  }
+
+  getInventory(guildId, userId) {
+    return this.db.prepare('SELECT item, quantity FROM inventory WHERE guildId = ? AND userId = ?').all(guildId, userId);
+  }
+
+  addTickets(guildId, userId, amount) {
+    this.ensureUser(guildId, userId);
+    this.db.prepare('UPDATE users SET tickets = tickets + ? WHERE guildId = ? AND userId = ?').run(amount, guildId, userId);
+  }
+
+  setCooldown(guildId, userId, key, timestamp) {
+    this.ensureUser(guildId, userId);
+    this.db.prepare(`UPDATE users SET ${key} = ? WHERE guildId = ? AND userId = ?`).run(timestamp, guildId, userId);
+  }
+
+  createRaffle(guildId, prize, entryCost) {
+    const stmt = this.db.prepare('INSERT INTO raffles (guildId, prize, entryCost, status) VALUES (?, ?, ?, ?)');
+    const result = stmt.run(guildId, prize, entryCost, 'open');
+    return this.db.prepare('SELECT * FROM raffles WHERE id = ?').get(result.lastInsertRowid);
+  }
+
+  getOpenRaffle(guildId) {
+    return this.db.prepare('SELECT * FROM raffles WHERE guildId = ? AND status = ? ORDER BY createdAt DESC LIMIT 1').get(guildId, 'open');
+  }
+
+  addRaffleEntry(raffleId, userId, tickets = 1) {
+    const existing = this.db.prepare('SELECT * FROM raffle_entries WHERE raffleId = ? AND userId = ?').get(raffleId, userId);
+    if (existing) {
+      this.db.prepare('UPDATE raffle_entries SET tickets = tickets + ? WHERE id = ?').run(tickets, existing.id);
+    } else {
+      this.db.prepare('INSERT INTO raffle_entries (raffleId, userId, tickets) VALUES (?, ?, ?)').run(raffleId, userId, tickets);
+    }
+  }
+
+  getRaffleEntries(raffleId) {
+    return this.db.prepare('SELECT * FROM raffle_entries WHERE raffleId = ?').all(raffleId);
+  }
+
+  closeRaffle(raffleId) {
+    this.db.prepare('UPDATE raffles SET status = ? WHERE id = ?').run('closed', raffleId);
+  }
+}
+
+module.exports = DatabaseManager;

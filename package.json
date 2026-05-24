@@ -1,0 +1,29 @@
+{
+  "name": "discord-economy-bot",
+  "version": "0.1.0",
+  "description": "Private Discord economy and minigame bot built with discord.js.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "dev": "nodemon src/index.js",
+    "pm2:start": "pm2 start ecosystem.config.js --name discord-economy-bot",
+    "pm2:logs": "pm2 logs discord-economy-bot",
+    "pm2:stop": "pm2 stop discord-economy-bot",
+    "pm2:restart": "pm2 restart discord-economy-bot"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@discordjs/rest": "^1.5.1",
+   ,
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "pm2": "^5.3.0"
+  } "better-sqlite3": "^8.5.0",
+    "discord-api-types": "^0.40.0",
+    "discord.js": "^14.15.0",
+    "dotenv": "^16.1.4"
+  }
+}

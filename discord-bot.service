@@ -1,0 +1,15 @@
+[Unit]
+Description=Discord Economy Bot
+After=network.target
+
+[Service]
+Type=simple
+User=discord-bot
+WorkingDirectory=/home/discord-bot/discord-economy-bot
+EnvironmentFile=/home/discord-bot/discord-economy-bot/.env
+ExecStart=/usr/local/bin/node /home/discord-bot/discord-economy-bot/src/index.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
