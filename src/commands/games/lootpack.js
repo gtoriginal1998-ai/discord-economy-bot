@@ -1,18 +1,16 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const config = require('../../config');
 const { canRunCooldown, getCooldownRemaining } = require('../../utils/cooldowns');
-
-const pool = [
-  { type: 'coins', amount: 200 },
-  { type: 'coins', amount: 300 },
-  { type: 'item', name: 'Mystery Token' },
-  { type: 'item', name: 'Lucky Charm' },
-  { type: 'item', name: 'Epic Crystal' },
-  { type: 'coins', amount: 500 }
-];
+const { getRandomRustItem, getItemRarity } = require('../../utils/rustItems');
 
 function getLoot() {
-  return pool[Math.floor(Math.random() * pool.length)];
+  const rand = Math.random() * 100;
+  // 40% chance coins, 60% chance Rust item
+  if (rand < 40) {
+    const coinAmounts = [150, 200, 250, 300];
+    return { type: 'coins', amount: coinAmounts[Math.floor(Math.random() * coinAmounts.length)] };
+  }
+  return { type: 'item', item: getRandomRustItem() };
 }
 
 module.exports = {
@@ -29,22 +27,37 @@ module.exports = {
 
     const loot = getLoot();
     let description = '';
+    let embedColor = '#FF7F50';
 
     if (loot.type === 'coins') {
       client.db.modifyBalance(interaction.guildId, interaction.user.id, loot.amount);
       description = `You get **${loot.amount} coins**!`;
     } else {
-      client.db.addItem(interaction.guildId, interaction.user.id, loot.name, 1);
-      description = `You found **${loot.name}**!`; 
+      const item = loot.item;
+      const rarity = getItemRarity(item.name);
+      client.db.addItem(interaction.guildId, interaction.user.id, item.name, 1);
+      // Queue for KAOS delivery
+      client.db.addDelivery(interaction.guildId, interaction.user.id, item.name, 1);
+      description = `You found **${item.emoji} ${item.name}** (${rarity})\n\nUse \`/claim\` to deliver to your game!`; 
+      
+      // Color by rarity
+      const rarityColors = {
+        common: '#95A5A6',
+        uncommon: '#2ECC71',
+        rare: '#3498DB',
+        epic: '#9B59B6',
+        legendary: '#F39C12'
+      };
+      embedColor = rarityColors[rarity] || '#FF7F50';
     }
 
     client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
     client.db.setCooldown(interaction.guildId, interaction.user.id, 'lastLootpack', Date.now());
 
     const embed = new EmbedBuilder()
-      .setTitle('Loot Pack Opened')
+      .setTitle('📦 Loot Pack Opened')
       .setDescription(description)
-      .setColor('#FF7F50');
+      .setColor(embedColor);
 
     await interaction.reply({ embeds: [embed] });
   }

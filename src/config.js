@@ -9,6 +9,10 @@ module.exports = {
   guildId: process.env.GUILD_ID,
   adminRoleId: process.env.ADMIN_ROLE_ID || null,
   dbPath: process.env.DATABASE_PATH || path.resolve(__dirname, '../database/data.sqlite'),
+  kaos: {
+    transactionsChannelId: process.env.KAOS_CHANNEL_ID || null,
+    serverId: process.env.KAOS_SERVER_ID || '1'
+  },
   cooldowns: {
     daily: 24 * 60 * 60 * 1000,
     lootpack: 2 * 60 * 60 * 1000,

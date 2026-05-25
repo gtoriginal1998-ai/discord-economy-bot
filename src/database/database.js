@@ -54,6 +54,25 @@ class DatabaseManager {
         UNIQUE(raffleId, userId),
         FOREIGN KEY (raffleId) REFERENCES raffles(id) ON DELETE CASCADE
       );
+
+      CREATE TABLE IF NOT EXISTS kaos_links (
+        guildId TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        steamId TEXT NOT NULL,
+        linkedAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+        PRIMARY KEY (guildId, userId)
+      );
+
+      CREATE TABLE IF NOT EXISTS pending_deliveries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        guildId TEXT NOT NULL,
+        userId TEXT NOT NULL,
+        item TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+        deliveredAt INTEGER DEFAULT NULL
+      );
     `;
 
     this.db.exec(schema);
@@ -132,9 +151,37 @@ class DatabaseManager {
   }
 
   getOpenRaffle(guildId) {
-    return this.db.prepare('SELECT * FROM raffles WHERE guildId = ? AND status = ? ORDER BY createdAt DESC LIMIT 1').get(guildId, 'open');
+
+  // KAOS Linking
+  linkAccount(guildId, userId, steamId) {
+    this.db.prepare('INSERT OR REPLACE INTO kaos_links (guildId, userId, steamId) VALUES (?, ?, ?)').run(guildId, userId, steamId);
   }
 
+  getLinkedAccount(guildId, userId) {
+    return this.db.prepare('SELECT steamId FROM kaos_links WHERE guildId = ? AND userId = ?').get(guildId, userId);
+  }
+
+  unlinkAccount(guildId, userId) {
+    this.db.prepare('DELETE FROM kaos_links WHERE guildId = ? AND userId = ?').run(guildId, userId);
+  }
+
+  // Pending Deliveries
+  addDelivery(guildId, userId, item, quantity) {
+    this.db.prepare('INSERT INTO pending_deliveries (guildId, userId, item, quantity) VALUES (?, ?, ?, ?)').run(guildId, userId, item, quantity);
+  }
+
+  getPendingDeliveries(guildId, userId) {
+    return this.db.prepare('SELECT id, item, quantity FROM pending_deliveries WHERE guildId = ? AND userId = ? AND status = ?').all(guildId, userId, 'pending');
+  }
+
+  markDeliveryComplete(deliveryId) {
+    this.db.prepare('UPDATE pending_deliveries SET status = ?, deliveredAt = ? WHERE id = ?').run('delivered', Date.now(), deliveryId);
+  }
+
+  getDeliveryHistory(guildId, userId, limit = 10) {
+    return this.db.prepare('SELECT item, quantity, status, createdAt FROM pending_deliveries WHERE guildId = ? AND userId = ? ORDER BY createdAt DESC LIMIT ?').all(guildId, userId, limit);
+  }
+}
   addRaffleEntry(raffleId, userId, tickets = 1) {
     const existing = this.db.prepare('SELECT * FROM raffle_entries WHERE raffleId = ? AND userId = ?').get(raffleId, userId);
     if (existing) {

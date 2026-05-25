@@ -1,13 +1,14 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const config = require('../../config');
 const { canRunCooldown, getCooldownRemaining } = require('../../utils/cooldowns');
+const { getRandomRustItem, getItemRarity } = require('../../utils/rustItems');
 
 const outcomes = [
   { label: 'Small Win', reward: 75, color: '#57F287' },
   { label: 'Medium Win', reward: 150, color: '#F1C40F' },
   { label: 'Jackpot', reward: 400, color: '#E74C3C' },
-  { label: 'Item Drop', item: 'Gold Ticket', color: '#9B59B6' },
-  { label: 'Nothing', reward: 0, color: '#95A5A6' }
+  { label: 'Lucky Drop', item: true, color: '#9B59B6' },
+  { label: 'Better Luck Next Time', reward: 0, color: '#95A5A6' }
 ];
 
 function rollWheel() {
@@ -31,13 +32,27 @@ module.exports = {
 
     client.db.modifyBalance(interaction.guildId, interaction.user.id, -config.economy.spinCost);
     const result = rollWheel();
-    let description = `You spun the wheel and landed on **${result.label}**.`;
+    let embedColor = result.color || '#7289DA';
 
     if (result.reward) {
       client.db.modifyBalance(interaction.guildId, interaction.user.id, result.reward);
       description += ` You earned **${result.reward} coins**.`;
     } else if (result.item) {
-      client.db.addItem(interaction.guildId, interaction.user.id, result.item, 1);
+      const rustItem = getRandomRustItem();
+      const rarity = getItemRarity(rustItem.name);
+      client.db.addItem(interaction.guildId, interaction.user.id, rustItem.name, 1);
+      // Queue for KAOS delivery
+      client.db.addDelivery(interaction.guildId, interaction.user.id, rustItem.name, 1);
+      description += ` You got **${rustItem.emoji} ${rustItem.name}** (${rarity})\n\nUse \`/claim\` to deliver to your game!`; 
+      
+      const rarityColors = {
+        common: '#95A5A6',
+        uncommon: '#2ECC71',
+        rare: '#3🎡 Spinner Wheel')
+      .setDescription(description)
+      .setColor(embedColor
+      };
+      embedColor = rarityColors[rarity] || '#7289DA'.user.id, result.item, 1);
       description += ` You received **${result.item}**.`;
     }
 
