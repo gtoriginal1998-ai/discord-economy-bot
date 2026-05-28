@@ -1,64 +1,86 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const config = require('../../config');
 const { canRunCooldown, getCooldownRemaining } = require('../../utils/cooldowns');
-const { getRandomRustItem, getItemRarity } = require('../../utils/rustItems');
+const { getItemByName, getItemRarity } = require('../../utils/rustItems');
 
-function getLoot() {
-  const rand = Math.random() * 100;
-  // 40% chance coins, 60% chance Rust item
-  if (rand < 40) {
-    const coinAmounts = [150, 200, 250, 300];
-    return { type: 'coins', amount: coinAmounts[Math.floor(Math.random() * coinAmounts.length)] };
+const packs = {
+  basic: {
+    name: 'Basic Pack',
+    emoji: '📦',
+    cost: 3,
+    rewards: ['Elite Kit 1', 'Elite Kit 5', 'Elite Kit 28'],
+    color: '#3498DB'
+  },
+  elite: {
+    name: 'Elite Pack',
+    emoji: '⭐',
+    cost: 6,
+    rewards: ['Elite Kit 2', 'Elite Kit 25', 'Elite Kit 7'],
+    color: '#9B59B6'
+  },
+  mega: {
+    name: 'Mega Pack',
+    emoji: '💎',
+    cost: 10,
+    rewards: ['Elite Kit 27', 'Elite Kit 9', 'Elite Kit 31'],
+    color: '#F39C12'
   }
-  return { type: 'item', item: getRandomRustItem() };
+};
+
+function getRandomReward(packType) {
+  const rewards = packs[packType].rewards;
+  return rewards[Math.floor(Math.random() * rewards.length)];
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('lootpack')
-    .setDescription('Open a loot pack with a chance to win coins or rare items.'),
+    .setDescription('Open a loot pack with exclusive items!')
+    .addStringOption(option =>
+      option.setName('pack')
+        .setDescription('Which pack do you want to open?')
+        .setRequired(true)
+        .addChoices(
+          { name: 'Basic Pack (3 tickets)', value: 'basic' },
+          { name: 'Elite Pack (6 tickets)', value: 'elite' },
+          { name: 'Mega Pack (10 tickets)', value: 'mega' }
+        )
+    ),
   async execute(client, interaction) {
     const user = client.db.getUser(interaction.guildId, interaction.user.id);
+    const packType = interaction.options.getString('pack');
+    const pack = packs[packType];
+
+    if (user.tickets < pack.cost) {
+      return interaction.reply({ content: `You need ${pack.cost} tickets to open the ${pack.name}. You have ${user.tickets}.`, ephemeral: true });
+    }
 
     if (!canRunCooldown(user, 'lastLootpack', config.cooldowns.lootpack)) {
       const remainingMs = getCooldownRemaining(user, 'lastLootpack', config.cooldowns.lootpack);
       return interaction.reply({ content: `Loot pack is on cooldown. Try again in ${Math.ceil(remainingMs / 60000)} minute(s).`, ephemeral: true });
     }
 
-    const loot = getLoot();
-    let description = '';
-    let embedColor = '#FF7F50';
+    // Deduct ticket cost
+    client.db.addTickets(interaction.guildId, interaction.user.id, -pack.cost);
 
-    if (loot.type === 'coins') {
-      client.db.modifyBalance(interaction.guildId, interaction.user.id, loot.amount);
-      description = `You get **${loot.amount} coins**!`;
-    } else {
-      const item = loot.item;
-      const rarity = getItemRarity(item.name);
-      client.db.addItem(interaction.guildId, interaction.user.id, item.name, 1);
-      // Queue for KAOS delivery
-      client.db.addDelivery(interaction.guildId, interaction.user.id, item.name, 1);
-      description = `You found **${item.emoji} ${item.name}** (${rarity})\n\nUse \`/claim\` to deliver to your game!`; 
-      
-      // Color by rarity
-      const rarityColors = {
-        common: '#95A5A6',
-        uncommon: '#2ECC71',
-        rare: '#3498DB',
-        epic: '#9B59B6',
-        legendary: '#F39C12'
-      };
-      embedColor = rarityColors[rarity] || '#FF7F50';
-    }
+    // Get random reward from pack
+    const itemName = getRandomReward(packType);
+    const itemData = getItemByName(itemName);
+    const rarity = getItemRarity(itemName);
 
+    // Add to inventory and queue for KAOS delivery
+    client.db.addItem(interaction.guildId, interaction.user.id, itemName, 1);
+    client.db.addDelivery(interaction.guildId, interaction.user.id, itemName, 1);
     client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
     client.db.setCooldown(interaction.guildId, interaction.user.id, 'lastLootpack', Date.now());
 
     const embed = new EmbedBuilder()
-      .setTitle('📦 Loot Pack Opened')
-      .setDescription(description)
-      .setColor(embedColor);
+      .setTitle(`${pack.emoji} ${pack.name} Opened`)
+      .setDescription(`You received **${itemData.emoji} ${itemName}** (${rarity})\n\nUse \`/claim\` to deliver to your game!`)
+      .setColor(pack.color)
+      .setFooter({ text: `Pack cost: ${pack.cost} tickets` });
 
     await interaction.reply({ embeds: [embed] });
   }
 };
+

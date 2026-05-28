@@ -48,7 +48,16 @@ const RUST_ITEMS = {
     { name: 'Electric Fuse', emoji: '⚙️', value: 380 },
     { name: 'AK', emoji: '🔫', value: 600 },
     { name: 'M249', emoji: '🎖️', value: 550 },
-    { name: 'C4', emoji: '💣', value: 500 }
+    { name: 'C4', emoji: '💣', value: 500 },
+    { name: 'Elite Kit 1', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 2', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 5', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 7', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 9', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 25', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 27', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 28', emoji: '📦', value: 800 },
+    { name: 'Elite Kit 31', emoji: '📦', value: 800 }
   ]
 };
 
