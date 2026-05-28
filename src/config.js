@@ -21,8 +21,7 @@ module.exports = {
   },
   economy: {
     dailyReward: 1,
-    spinCost: 1,
-    xpPerAction: 15
+    spinCost: 1
   },
   raffle: {
     channelId: process.env.RAFFLE_CHANNEL_ID || null,

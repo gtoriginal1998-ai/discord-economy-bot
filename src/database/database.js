@@ -18,8 +18,6 @@ class DatabaseManager {
         guildId TEXT NOT NULL,
         userId TEXT NOT NULL,
         balance INTEGER NOT NULL DEFAULT 0,
-        xp INTEGER NOT NULL DEFAULT 0,
-        level INTEGER NOT NULL DEFAULT 1,
         tickets INTEGER NOT NULL DEFAULT 0,
         lastDaily INTEGER DEFAULT 0,
         lastLootpack INTEGER DEFAULT 0,
@@ -87,7 +85,7 @@ class DatabaseManager {
 
   ensureUser(guildId, userId) {
     const stmt = this.db.prepare(
-      'INSERT OR IGNORE INTO users (guildId, userId, balance, xp, level, tickets) VALUES (?, ?, 0, 0, 1, 0)'
+      'INSERT OR IGNORE INTO users (guildId, userId, balance, tickets) VALUES (?, ?, 0, 0)'
     );
     stmt.run(guildId, userId);
   }
@@ -111,20 +109,6 @@ class DatabaseManager {
     const stmt = this.db.prepare('UPDATE users SET balance = balance + ? WHERE guildId = ? AND userId = ?');
     stmt.run(amount, guildId, userId);
     return this.getUser(guildId, userId);
-  }
-
-  addXp(guildId, userId, amount) {
-    this.ensureUser(guildId, userId);
-    const stmt = this.db.prepare('UPDATE users SET xp = xp + ? WHERE guildId = ? AND userId = ?');
-    stmt.run(amount, guildId, userId);
-    const user = this.getUser(guildId, userId);
-    const nextLevelXp = user.level * 200;
-    if (user.xp >= nextLevelXp) {
-      const levelUp = this.db.prepare('UPDATE users SET level = level + 1, xp = xp - ? WHERE guildId = ? AND userId = ?');
-      levelUp.run(nextLevelXp, guildId, userId);
-      return this.getUser(guildId, userId);
-    }
-    return user;
   }
 
   addItem(guildId, userId, item, quantity = 1) {
