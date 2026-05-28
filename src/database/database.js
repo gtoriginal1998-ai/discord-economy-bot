@@ -151,6 +151,8 @@ class DatabaseManager {
   }
 
   getOpenRaffle(guildId) {
+    return this.db.prepare('SELECT * FROM raffles WHERE guildId = ? AND status = ?').get(guildId, 'open');
+  }
 
   // KAOS Linking
   linkAccount(guildId, userId, steamId) {
@@ -181,7 +183,7 @@ class DatabaseManager {
   getDeliveryHistory(guildId, userId, limit = 10) {
     return this.db.prepare('SELECT item, quantity, status, createdAt FROM pending_deliveries WHERE guildId = ? AND userId = ? ORDER BY createdAt DESC LIMIT ?').all(guildId, userId, limit);
   }
-}
+
   addRaffleEntry(raffleId, userId, tickets = 1) {
     const existing = this.db.prepare('SELECT * FROM raffle_entries WHERE raffleId = ? AND userId = ?').get(raffleId, userId);
     if (existing) {
