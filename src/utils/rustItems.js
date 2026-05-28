@@ -23,7 +23,9 @@ const RUST_ITEMS = {
     { name: 'Metal Frags', emoji: '🔧', value: 120 },
     { name: 'Crude Oil', emoji: '🛢️', value: 140 },
     { name: 'Sewing Kit', emoji: '🧵', value: 100 },
-    { name: 'Empty Propane Tank', emoji: '⛽', value: 130 }
+    { name: 'Empty Propane Tank', emoji: '⛽', value: 130 },
+    { name: 'HQM', emoji: '💎', value: 200 },
+    { name: 'Explo Ammo', emoji: '💣', value: 180 }
   ],
 
   // Epic items (very rare)
@@ -32,7 +34,9 @@ const RUST_ITEMS = {
     { name: 'Rifle Body', emoji: '🔫', value: 300 },
     { name: 'SMG Body', emoji: '🎯', value: 280 },
     { name: 'Snow Jacket', emoji: '🧥', value: 200 },
-    { name: 'Diving Tank', emoji: '🤿', value: 220 }
+    { name: 'Diving Tank', emoji: '🤿', value: 220 },
+    { name: 'Supply Signal', emoji: '📡', value: 400 },
+    { name: 'Rockets', emoji: '🚀', value: 350 }
   ],
 
   // Legendary items (extremely rare)
@@ -41,7 +45,10 @@ const RUST_ITEMS = {
     { name: 'Blue Keycard', emoji: '🔷', value: 450 },
     { name: 'Green Keycard', emoji: '🟢', value: 400 },
     { name: 'Fuse', emoji: '⚡', value: 350 },
-    { name: 'Electric Fuse', emoji: '⚙️', value: 380 }
+    { name: 'Electric Fuse', emoji: '⚙️', value: 380 },
+    { name: 'AK', emoji: '🔫', value: 600 },
+    { name: 'M249', emoji: '🎖️', value: 550 },
+    { name: 'C4', emoji: '💣', value: 500 }
   ]
 };
 

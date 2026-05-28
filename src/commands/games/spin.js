@@ -1,24 +1,40 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const config = require('../../config');
 const { canRunCooldown, getCooldownRemaining } = require('../../utils/cooldowns');
-const { getRandomRustItem, getItemRarity } = require('../../utils/rustItems');
+const { getItemRarity, getItemByName } = require('../../utils/rustItems');
 
+// Spinner outcomes with weighted probabilities and quantity ranges
 const outcomes = [
-  { label: 'Small Win', reward: 75, color: '#57F287' },
-  { label: 'Medium Win', reward: 150, color: '#F1C40F' },
-  { label: 'Jackpot', reward: 400, color: '#E74C3C' },
-  { label: 'Lucky Drop', item: true, color: '#9B59B6' },
-  { label: 'Better Luck Next Time', reward: 0, color: '#95A5A6' }
+  { name: 'AK', probability: 12.67, minQty: 3, maxQty: 9 },
+  { name: 'Explo Ammo', probability: 12.67, minQty: 1000, maxQty: 3000 },
+  { name: 'HQM', probability: 12.67, minQty: 9000, maxQty: 20000 },
+  { name: 'M249', probability: 12.67, minQty: 1, maxQty: 3 },
+  { name: 'Metal Frags', probability: 12.67, minQty: 10000, maxQty: 25000 },
+  { name: 'Supply Signal', probability: 12.67, minQty: 1, maxQty: 3 },
+  { name: 'C4', probability: 9.00, minQty: 2, maxQty: 10 },
+  { name: 'Rockets', probability: 8.00, minQty: 5, maxQty: 25 }
 ];
 
 function rollWheel() {
-  return outcomes[Math.floor(Math.random() * outcomes.length)];
+  const rand = Math.random() * 100;
+  let cumulative = 0;
+
+  for (const outcome of outcomes) {
+    cumulative += outcome.probability;
+    if (rand <= cumulative) {
+      const quantity = Math.floor(Math.random() * (outcome.maxQty - outcome.minQty + 1)) + outcome.minQty;
+      return { ...outcome, quantity };
+    }
+  }
+
+  // Fallback (shouldn't reach here)
+  return { ...outcomes[0], quantity: Math.floor(Math.random() * (outcomes[0].maxQty - outcomes[0].minQty + 1)) + outcomes[0].minQty };
 }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('spin')
-    .setDescription('Spin the wheel for coins or items.'),
+    .setDescription('Spin the wheel to win Rust items!'),
   async execute(client, interaction) {
     const user = client.db.getUser(interaction.guildId, interaction.user.id);
     if (user.balance < config.economy.spinCost) {
@@ -32,38 +48,30 @@ module.exports = {
 
     client.db.modifyBalance(interaction.guildId, interaction.user.id, -config.economy.spinCost);
     const result = rollWheel();
-    let embedColor = result.color || '#7289DA';
+    const itemData = getItemByName(result.name);
+    const rarity = getItemRarity(result.name);
 
-    if (result.reward) {
-      client.db.modifyBalance(interaction.guildId, interaction.user.id, result.reward);
-      description += ` You earned **${result.reward} coins**.`;
-    } else if (result.item) {
-      const rustItem = getRandomRustItem();
-      const rarity = getItemRarity(rustItem.name);
-      client.db.addItem(interaction.guildId, interaction.user.id, rustItem.name, 1);
-      // Queue for KAOS delivery
-      client.db.addDelivery(interaction.guildId, interaction.user.id, rustItem.name, 1);
-      description += ` You got **${rustItem.emoji} ${rustItem.name}** (${rarity})\n\nUse \`/claim\` to deliver to your game!`; 
-      
-      const rarityColors = {
-        common: '#95A5A6',
-        uncommon: '#2ECC71',
-        rare: '#3🎡 Spinner Wheel')
-      .setDescription(description)
-      .setColor(embedColor
-      };
-      embedColor = rarityColors[rarity] || '#7289DA'.user.id, result.item, 1);
-      description += ` You received **${result.item}**.`;
-    }
-
+    // Add item to inventory and queue for KAOS delivery
+    client.db.addItem(interaction.guildId, interaction.user.id, result.name, result.quantity);
+    client.db.addDelivery(interaction.guildId, interaction.user.id, result.name, result.quantity);
     client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
     client.db.setCooldown(interaction.guildId, interaction.user.id, 'lastSpin', Date.now());
 
+    const rarityColors = {
+      common: '#95A5A6',
+      uncommon: '#2ECC71',
+      rare: '#3498DB',
+      epic: '#9B59B6',
+      legendary: '#F39C12'
+    };
+
     const embed = new EmbedBuilder()
-      .setTitle('Spinner Wheel')
-      .setDescription(description)
-      .setColor(result.color || '#7289DA');
+      .setTitle('🎡 Spinner Wheel')
+      .setDescription(`You won **${result.quantity.toLocaleString()}x ${itemData.emoji} ${result.name}** (${rarity})\n\nUse \`/claim\` to deliver to your game!`)
+      .setColor(rarityColors[rarity] || '#7289DA')
+      .setFooter({ text: `Spin cost: ${config.economy.spinCost} coins` });
 
     await interaction.reply({ embeds: [embed] });
   }
 };
+
