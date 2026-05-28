@@ -23,5 +23,9 @@ module.exports = {
     dailyReward: 1,
     spinCost: 1,
     xpPerAction: 15
+  },
+  raffle: {
+    channelId: process.env.RAFFLE_CHANNEL_ID || null,
+    enabled: true
   }
 };

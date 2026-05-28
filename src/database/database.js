@@ -73,6 +73,13 @@ class DatabaseManager {
         createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now')),
         deliveredAt INTEGER DEFAULT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS raffle_meta (
+        guildId TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (guildId, key)
+      );
     `;
 
     this.db.exec(schema);
@@ -199,6 +206,76 @@ class DatabaseManager {
 
   closeRaffle(raffleId) {
     this.db.prepare('UPDATE raffles SET status = ? WHERE id = ?').run('closed', raffleId);
+  }
+
+  /**
+   * Draw a winner from a raffle's entries using weighted ticket selection.
+   * Returns the winning userId, or null if there were no entries.
+   * Does NOT close the raffle — call closeRaffle() separately.
+   */
+  drawRaffleWinner(raffleId) {
+    const entries = this.getRaffleEntries(raffleId);
+    if (!entries.length) return null;
+
+    const pool = [];
+    for (const entry of entries) {
+      for (let i = 0; i < entry.tickets; i++) {
+        pool.push(entry.userId);
+      }
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // ── Daily raffle meta ──────────────────────────────────────────────────────
+
+  /**
+   * Returns the day-of-week number (0–6) of the currently open daily raffle,
+   * or null if no daily raffle is tracked as open.
+   */
+  getCurrentRaffleDay(guildId) {
+    const row = this.db
+      .prepare('SELECT value FROM raffle_meta WHERE guildId = ? AND key = ?')
+      .get(guildId, 'currentRaffleDay');
+    return row ? parseInt(row.value, 10) : null;
+  }
+
+  /**
+   * Store which day-of-week (0–6) the currently open daily raffle was created
+   * for. Pass null to clear the value (e.g. after the raffle is drawn).
+   */
+  setRaffleDay(guildId, day) {
+    if (day === null) {
+      this.db
+        .prepare('DELETE FROM raffle_meta WHERE guildId = ? AND key = ?')
+        .run(guildId, 'currentRaffleDay');
+    } else {
+      this.db
+        .prepare('INSERT OR REPLACE INTO raffle_meta (guildId, key, value) VALUES (?, ?, ?)')
+        .run(guildId, 'currentRaffleDay', String(day));
+    }
+  }
+
+  /**
+   * Persist the message ID of the active daily raffle embed so the scheduler
+   * can edit / reference it after a restart.
+   */
+  getRaffleMessageId(guildId) {
+    const row = this.db
+      .prepare('SELECT value FROM raffle_meta WHERE guildId = ? AND key = ?')
+      .get(guildId, 'raffleMessageId');
+    return row ? row.value : null;
+  }
+
+  setRaffleMessageId(guildId, messageId) {
+    if (messageId === null) {
+      this.db
+        .prepare('DELETE FROM raffle_meta WHERE guildId = ? AND key = ?')
+        .run(guildId, 'raffleMessageId');
+    } else {
+      this.db
+        .prepare('INSERT OR REPLACE INTO raffle_meta (guildId, key, value) VALUES (?, ?, ?)')
+        .run(guildId, 'raffleMessageId', String(messageId));
+    }
   }
 }
 

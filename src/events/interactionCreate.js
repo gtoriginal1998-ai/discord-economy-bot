@@ -15,15 +15,28 @@ module.exports = {
       }
 
       const user = client.db.getUser(interaction.guildId, interaction.user.id);
-      if (user.balance < raffle.entryCost) {
-        return interaction.reply({ content: `You need ${raffle.entryCost} coins to enter this raffle.`, ephemeral: true });
+
+      // Check whether the user has already entered this raffle
+      const existingEntries = client.db.getRaffleEntries(raffle.id);
+      if (existingEntries.some((e) => e.userId === interaction.user.id)) {
+        return interaction.reply({ content: 'You have already entered this raffle.', ephemeral: true });
       }
 
-      client.db.modifyBalance(interaction.guildId, interaction.user.id, -raffle.entryCost);
+      if (user.tickets < raffle.entryCost) {
+        return interaction.reply({
+          content: `You need **${raffle.entryCost} ticket${raffle.entryCost !== 1 ? 's' : ''}** to enter this raffle but you only have **${user.tickets}**.`,
+          ephemeral: true
+        });
+      }
+
+      client.db.addTickets(interaction.guildId, interaction.user.id, -raffle.entryCost);
       client.db.addRaffleEntry(raffle.id, interaction.user.id, 1);
       client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
 
-      return interaction.reply({ content: `You entered the raffle and paid ${raffle.entryCost} coins. Good luck!`, ephemeral: true });
+      return interaction.reply({
+        content: `✅ You entered the raffle and spent **${raffle.entryCost} ticket${raffle.entryCost !== 1 ? 's' : ''}**. Good luck! 🍀`,
+        ephemeral: true
+      });
     }
 
     if (!interaction.isChatInputCommand()) return;
