@@ -16,13 +16,13 @@ module.exports = {
       return interaction.reply({ content: `Daily reward is on cooldown. Try again in ${hours} hour(s).`, ephemeral: true });
     }
 
-    client.db.modifyBalance(interaction.guildId, interaction.user.id, config.economy.dailyReward);
+    client.db.addTickets(interaction.guildId, interaction.user.id, config.economy.dailyReward);
     client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
     client.db.setCooldown(interaction.guildId, interaction.user.id, 'lastDaily', Date.now());
 
     const embed = new EmbedBuilder()
       .setTitle('Daily Reward Claimed')
-      .setDescription(`You claimed ${config.economy.dailyReward} coins and gained ${config.economy.xpPerAction} XP.`)
+      .setDescription(`You claimed ${config.economy.dailyReward} tickets and gained ${config.economy.xpPerAction} XP.`)
       .setColor('#FFD166');
 
     await interaction.reply({ embeds: [embed] });

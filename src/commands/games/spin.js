@@ -37,8 +37,8 @@ module.exports = {
     .setDescription('Spin the wheel to win Rust items!'),
   async execute(client, interaction) {
     const user = client.db.getUser(interaction.guildId, interaction.user.id);
-    if (user.balance < config.economy.spinCost) {
-      return interaction.reply({ content: `You need ${config.economy.spinCost} coins to spin the wheel.`, ephemeral: true });
+    if (user.tickets < config.economy.spinCost) {
+      return interaction.reply({ content: `You need ${config.economy.spinCost} tickets to spin the wheel. You have ${user.tickets}.`, ephemeral: true });
     }
 
     if (!canRunCooldown(user, 'lastSpin', config.cooldowns.spin)) {
@@ -46,7 +46,7 @@ module.exports = {
       return interaction.reply({ content: `Spin is on cooldown. Try again in ${Math.ceil(remainingMs / 60000)} minute(s).`, ephemeral: true });
     }
 
-    client.db.modifyBalance(interaction.guildId, interaction.user.id, -config.economy.spinCost);
+    client.db.addTickets(interaction.guildId, interaction.user.id, -config.economy.spinCost);
     const result = rollWheel();
     const itemData = getItemByName(result.name);
     const rarity = getItemRarity(result.name);
@@ -69,7 +69,7 @@ module.exports = {
       .setTitle('🎡 Spinner Wheel')
       .setDescription(`You won **${result.quantity.toLocaleString()}x ${itemData.emoji} ${result.name}** (${rarity})\n\nUse \`/claim\` to deliver to your game!`)
       .setColor(rarityColors[rarity] || '#7289DA')
-      .setFooter({ text: `Spin cost: ${config.economy.spinCost} coins` });
+      .setFooter({ text: `Spin cost: ${config.economy.spinCost} tickets` });
 
     await interaction.reply({ embeds: [embed] });
   }

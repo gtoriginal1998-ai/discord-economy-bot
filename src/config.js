@@ -20,11 +20,8 @@ module.exports = {
     ticket: 60 * 1000
   },
   economy: {
-    dailyReward: 250,
-    lootpackCost: 150,
-    spinCost: 50,
-    ticketCost: 100,
-    startingBalance: 500,
+    dailyReward: 5,
+    spinCost: 2,
     xpPerAction: 15
   }
 };

@@ -4,7 +4,7 @@ const { getItemByName } = require('../../utils/rustItems');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('sell')
-    .setDescription('Sell items from your inventory for coins.')
+    .setDescription('Sell items from your inventory for tickets.')
     .addStringOption((option) => option.setName('item').setDescription('Item name to sell').setRequired(true))
     .addIntegerOption((option) =>
       option.setName('quantity').setDescription('How many to sell').setMinValue(1).setMaxValue(100).setRequired(false)
@@ -29,7 +29,7 @@ module.exports = {
       });
     }
 
-    const totalCoins = itemData.value * quantity;
+    const totalTickets = itemData.value * quantity;
 
     // Remove from inventory by updating quantity or deleting
     client.db.db
@@ -39,12 +39,12 @@ module.exports = {
     // Clean up zero-quantity items
     client.db.db.prepare('DELETE FROM inventory WHERE quantity <= 0').run();
 
-    // Add coins
-    client.db.modifyBalance(interaction.guildId, interaction.user.id, totalCoins);
+    // Add tickets
+    client.db.addTickets(interaction.guildId, interaction.user.id, totalTickets);
 
     const embed = new EmbedBuilder()
       .setTitle('✅ Sale Complete')
-      .setDescription(`You sold **${quantity}x ${itemData.emoji} ${itemName}** for **${totalCoins} coins**.`)
+      .setDescription(`You sold **${quantity}x ${itemData.emoji} ${itemName}** for **${totalTickets} tickets**.`)
       .setColor('#2ECC71');
 
     await interaction.reply({ embeds: [embed] });
