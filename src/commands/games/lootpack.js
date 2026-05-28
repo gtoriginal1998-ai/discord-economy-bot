@@ -46,6 +46,7 @@ module.exports = {
           { name: 'Mega Pack (10 tickets)', value: 'mega' }
         )
     ),
+
   async execute(client, interaction) {
     const user = client.db.getUser(interaction.guildId, interaction.user.id);
     const packType = interaction.options.getString('pack');

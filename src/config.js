@@ -20,8 +20,8 @@ module.exports = {
     ticket: 60 * 1000
   },
   economy: {
-    dailyReward: 5,
-    spinCost: 2,
+    dailyReward: 1,
+    spinCost: 1,
     xpPerAction: 15
   }
 };
