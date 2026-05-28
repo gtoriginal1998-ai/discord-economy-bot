@@ -1,5 +1,4 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } = require('discord.js');
-const config = require('../config');
 const { getCooldownRemaining } = require('../utils/cooldowns');
 
 module.exports = {
@@ -31,7 +30,6 @@ module.exports = {
 
       client.db.addTickets(interaction.guildId, interaction.user.id, -raffle.entryCost);
       client.db.addRaffleEntry(raffle.id, interaction.user.id, 1);
-      client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
 
       return interaction.reply({
         content: `✅ You entered the raffle and spent **${raffle.entryCost} ticket${raffle.entryCost !== 1 ? 's' : ''}**. Good luck! 🍀`,
