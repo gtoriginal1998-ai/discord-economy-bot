@@ -72,7 +72,6 @@ module.exports = {
     // Add to inventory and queue for KAOS delivery
     client.db.addItem(interaction.guildId, interaction.user.id, itemName, 1);
     client.db.addDelivery(interaction.guildId, interaction.user.id, itemName, 1);
-    client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
     client.db.setCooldown(interaction.guildId, interaction.user.id, 'lastLootpack', Date.now());
 
     const embed = new EmbedBuilder()
