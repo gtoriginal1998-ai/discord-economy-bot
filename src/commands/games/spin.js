@@ -54,7 +54,6 @@ module.exports = {
     // Add item to inventory and queue for KAOS delivery
     client.db.addItem(interaction.guildId, interaction.user.id, result.name, result.quantity);
     client.db.addDelivery(interaction.guildId, interaction.user.id, result.name, result.quantity);
-    client.db.addXp(interaction.guildId, interaction.user.id, config.economy.xpPerAction);
     client.db.setCooldown(interaction.guildId, interaction.user.id, 'lastSpin', Date.now());
 
     const rarityColors = {
