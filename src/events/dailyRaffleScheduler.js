@@ -26,8 +26,12 @@ const raffleConfig = require('../config/dailyRaffles');
 
 /**
  * Build the raffle announcement embed shown when a new raffle opens.
+ *
+ * @param {object} raffle     - The raffle record from the database.
+ * @param {string} dayName    - Human-readable draw day name (e.g. "Monday").
+ * @param {number} entryCount - Current number of entries for this raffle.
  */
-function buildRaffleEmbed(raffle, dayName) {
+function buildRaffleEmbed(raffle, dayName, entryCount) {
   return new EmbedBuilder()
     .setTitle('🎟️ Daily Raffle — Open Now!')
     .setDescription(
@@ -38,7 +42,8 @@ function buildRaffleEmbed(raffle, dayName) {
     .addFields(
       { name: 'Prize', value: raffle.prize, inline: true },
       { name: 'Entry Cost', value: `${raffle.entryCost} ticket`, inline: true },
-      { name: 'Draw Day', value: dayName, inline: true }
+      { name: 'Draw Day', value: dayName, inline: true },
+      { name: 'Current Entries', value: String(entryCount), inline: true }
     )
     .setColor('#F39C12')
     .setFooter({ text: 'Good luck! One entry per user.' })
@@ -152,7 +157,8 @@ async function runTick(client) {
         .setStyle(ButtonStyle.Primary)
     );
 
-    const raffleEmbed = buildRaffleEmbed(newRaffle, DAY_NAMES[todayDayOfWeek]);
+    const entryCount = client.db.getRaffleEntries(newRaffle.id).length;
+    const raffleEmbed = buildRaffleEmbed(newRaffle, DAY_NAMES[todayDayOfWeek], entryCount);
     const sentMessage = await channel.send({ embeds: [raffleEmbed], components: [joinRow] });
     client.db.setRaffleMessageId(guildId, sentMessage.id);
 
