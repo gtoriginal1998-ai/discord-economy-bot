@@ -112,7 +112,7 @@ async function runTick(client) {
       client.db.setRaffleDay(guildId, null);
 
       const winnerEmbed = buildWinnerEmbed(openRaffle, winnerId);
-      await channel.send({ embeds: [winnerEmbed] });
+      // await channel.send({ embeds: [winnerEmbed] });
 
       // Disable the Join button on the original raffle message (best-effort)
       const oldMessageId = client.db.getRaffleMessageId(guildId);
@@ -126,7 +126,7 @@ async function runTick(client) {
               .setStyle(ButtonStyle.Secondary)
               .setDisabled(true)
           );
-          await oldMessage.edit({ components: [disabledRow] });
+          // await oldMessage.edit({ components: [disabledRow] });
         } catch {
           // Message may have been deleted — not a fatal error
         }
@@ -159,8 +159,8 @@ async function runTick(client) {
 
     const entryCount = client.db.getRaffleEntries(newRaffle.id).length;
     const raffleEmbed = buildRaffleEmbed(newRaffle, DAY_NAMES[todayDayOfWeek], entryCount);
-    const sentMessage = await channel.send({ embeds: [raffleEmbed], components: [joinRow] });
-    client.db.setRaffleMessageId(guildId, sentMessage.id);
+    // const sentMessage = await channel.send({ embeds: [raffleEmbed], components: [joinRow] });
+    // client.db.setRaffleMessageId(guildId, sentMessage.id);
 
     console.log(
       `[DailyRaffle] New raffle #${newRaffle.id} opened for ${DAY_NAMES[todayDayOfWeek]} — prize: ${prize}`
